@@ -1,131 +1,149 @@
-# Microsoft PowerShell Projects
+<div align="center">
 
-A curated set of **PowerShell scripts** for Microsoft ecosystem administration — including **Intune**, **Azure AD**, **Microsoft Graph**, and **Windows** management.  
-All scripts are provided as **sanitized templates** (company- and personal-specific data removed) so you can safely adapt them to your environment.
+# 🧠 Microsoft PowerShell Projects
+Reusable PowerShell scripts for Microsoft 365, Intune, Azure AD, and Windows automation  
+Clean, secure, and fully **sanitized for public sharing**
 
-> **Heads-up:** Always review and test in a non-production environment before use.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![PowerShell](https://img.shields.io/badge/Language-PowerShell-5391FE?logo=powershell&logoColor=white)](https://learn.microsoft.com/powershell/)
+[![Contributions Welcome](https://img.shields.io/badge/Contributions-Welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![Security Policy](https://img.shields.io/badge/Security-Policy-red.svg)](SECURITY.md)
 
----
-
-## Contents
-
-- `Get-IntuneUserDeviceReport.ps1` – example reporting script for user ↔ device relationships.
-- `Intune_Intranet_Rollout_Script.ps1` – deployment/rollout pattern you can adapt for line-of-business apps or intranet changes.
-- `uninstall-adobe-pdf.ps1` – sample remediation/cleanup workflow for uninstalling software.
-- `Intune\Kofax\KofaxDetectionScript.ps1` – example detection script structure for app presence/health.
-- `Sanitize-Scripts.ps1` – local tool to **make sanitized copies** of your scripts before publishing.
-
-> The above names reflect examples from this repo. Add/remove scripts as your collection grows.
+</div>
 
 ---
 
-## Why this repo?
+## 📘 Overview
 
-- Real-world admin tasks distilled into **clean, reusable** PowerShell.
-- **Safer sharing:** templates are scrubbed of org-specific details.
-- **Learning friendly:** emphasizes structure, error handling, idempotency, and Graph/REST usage patterns.
+This repository contains **production-tested PowerShell scripts** and patterns for Microsoft ecosystem administration:
+
+- Microsoft Intune & Endpoint Manager  
+- Entra ID / Azure Active Directory  
+- Microsoft Graph API automation  
+- Windows configuration and remediation
+
+All scripts are **sanitized templates** — any company-specific identifiers, credentials, or private information have been removed using the included tool:  
+[`Sanitize-Scripts.ps1`](Sanitize-Scripts.ps1)
 
 ---
 
-## Getting Started
+## 🗂️ Repository Structure
 
-### Requirements
-- Windows PowerShell **5.1** or PowerShell **7.x**
-- Recommended:
-  - [`Microsoft.Graph`](https://www.powershellgallery.com/packages/Microsoft.Graph) (for Graph API work)
-  - [`PSScriptAnalyzer`](https://www.powershellgallery.com/packages/PSScriptAnalyzer) (linting/quality)
-  - Execution policy that allows local scripts:  
-    `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
+| Folder | Description |
+|--------|--------------|
+| [`Get-IntuneUserDeviceReport`](Get-IntuneUserDeviceReport/) | Generate reports mapping users ↔ devices from Intune and Entra ID |
+| [`Intune_Intranet_Rollout`](Intune_Intranet_Rollout/) | Example rollout/deployment pattern for intranet or LOB content |
+| [`Uninstall-AdobePDF`](Uninstall-AdobePDF/) | Software remediation/uninstall template |
+| [`KofaxDetection`](KofaxDetection/) | Intune detection script structure for verifying app installs |
+| [`Sanitize-Scripts.ps1`](Sanitize-Scripts.ps1) | Utility to remove company or personal data from `.ps1` files |
+| [`README.md`](README.md) | Main documentation |
+| [`LICENSE`](LICENSE) | MIT license |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Contribution guidelines |
+| [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) | Contributor behavior standards |
+| [`SECURITY.md`](SECURITY.md) | Responsible disclosure and privacy policy |
 
-### Clone
+---
+
+## ⚙️ Requirements
+
+- **PowerShell** 7.x (recommended) or Windows PowerShell 5.1  
+- **Execution Policy:** `RemoteSigned` or `Bypass`  
+- **Modules:**  
+  - [Microsoft.Graph](https://www.powershellgallery.com/packages/Microsoft.Graph)  
+  - [PSScriptAnalyzer](https://www.powershellgallery.com/packages/PSScriptAnalyzer) *(for linting)*  
+
+---
+
+## 🚀 Quick Start
+
+Clone or download the repo:
+
 ```powershell
 git clone https://github.com/NerdyOreo/Microsoft_Powershell_Projects.git
 cd Microsoft_Powershell_Projects
 ````
 
-### Run a script (example)
+Run any script in test mode:
 
 ```powershell
-# Example: run a report script
-.\Get-IntuneUserDeviceReport.ps1 -WhatIf
+# Example: Run a user-device report
+.\Get-IntuneUserDeviceReport\Get-IntuneUserDeviceReport.ps1 -WhatIf
 ```
-
-> Most scripts support a `-WhatIf` or dry-run pattern. Check the top-of-file comments for details and parameters.
 
 ---
 
-## Sanitizing your own scripts (included tool)
+## 🧹 Using the Sanitizer
 
-This repo includes **`Sanitize-Scripts.ps1`**, which makes sanitized copies of `.ps1` files **without modifying the originals**.
-It also writes a `.mapping.json` and `.mapping.csv` so you can see what changed.
-
-**Examples**
+The included [`Sanitize-Scripts.ps1`](Sanitize-Scripts.ps1) ensures no private data appears in your code before publishing.
 
 ```powershell
-# Sanitize specific files → writes to .\Sanitized_PS1
+# Sanitize specific files
 .\Sanitize-Scripts.ps1 -Files @(
-  "C:\Path\Script1.ps1",
-  "C:\Path\Script2.ps1"
-) -OutputDir "C:\Path\Sanitized_PS1"
+  "C:\Scripts\MyScript.ps1"
+) -OutputDir "C:\Scripts\Sanitized_PS1"
 
-# Sanitize an entire folder (recursively)
-.\Sanitize-Scripts.ps1 -Path "C:\Scripts" -Recurse -OutputDir "C:\Scripts\Sanitized"
+# Sanitize entire folder
+.\Sanitize-Scripts.ps1 -Path "C:\Scripts" -Recurse -OutputDir "C:\Scripts\Sanitized_PS1"
 
-# Dry run (no files written)
-.\Sanitize-Scripts.ps1 -Path "C:\Scripts" -Recurse -WhatIf -OutputDir "C:\Scripts\Sanitized"
+# Dry run
+.\Sanitize-Scripts.ps1 -Path "C:\Scripts" -Recurse -WhatIf -OutputDir "C:\Scripts\Sanitized_PS1"
 ```
 
-**What it replaces (high level)**
-
-* Emails, UPNs, domains/hostnames (with whitelist), IPv4, MACs, GUIDs, URLs, UNC paths
-* Credential-like pairs and connection strings
-* JWT/Bearer tokens, SAS params, long Base64 blobs
-* Azure IDs (tenant/subscription/client) and Resource IDs
-* LDAP DNs
-* Company name terms you specify (see `-CompanyNamePatterns`)
-
-> Tip: Add public domains to the whitelist so they aren’t replaced (e.g. `microsoft.com`, `github.com`).
+Outputs include a `.sanitized.ps1` copy and `.mapping.json/.csv` replacement maps.
 
 ---
 
-## Script Quality Tips
+## 🧰 Recommended Practices
 
-* **Run PSScriptAnalyzer**
-
-  ```powershell
-  Install-Module PSScriptAnalyzer -Scope CurrentUser
-  Invoke-ScriptAnalyzer -Path . -Recurse -Fix -Settings Default
-  ```
-* **Use SecureString/SecretManagement** instead of hard-coded secrets.
-* **Parameterize** scripts; avoid environment-specific constants in code.
-* Prefer **idempotent** operations for deployments/remediations.
-* Add **`-WhatIf`** and **`-Confirm:$false`** patterns where meaningful.
+✅ Always test scripts in a **non-production** environment first.
+✅ Use `-WhatIf` and `-Confirm:$false` for safe execution.
+✅ Follow PowerShell style guidelines (see [`CONTRIBUTING.md`](CONTRIBUTING.md)).
+✅ Run `PSScriptAnalyzer` before pushing changes.
+✅ Review and sanitize code before publication.
 
 ---
 
-## Contributing
+## 🤝 Contributing
 
-Contributions are welcome!
-Please open an **issue** or **PR** with:
+We welcome improvements!
+See the [Contribution Guidelines](CONTRIBUTING.md) for style, testing, and sanitization rules.
 
-* a short description of the change
-* how you tested it
-* any prerequisites (modules/permissions)
-
-Coding style: align to PowerShell best practices (`PSScriptAnalyzer`), use CmdletBinding/advanced functions for new scripts, and include examples in comment-based help.
-
----
-
-## License & Disclaimer
-
-MIT License — see `LICENSE`.
-This repository is **not affiliated with Microsoft**. All scripts are provided **as-is** without warranty. Review code and test before production use.
+1. Fork this repo
+2. Create a feature branch
+3. Commit your change
+4. Open a Pull Request
 
 ---
 
-## Acknowledgments
+## 🔒 Security
 
-Thanks to the PowerShell community and Microsoft docs for patterns and references. If your script builds on someone’s public work, please credit them in the header comments.
+If you find any credential, domain, or sensitive information in the code, please report it **privately** via the instructions in the [Security Policy](SECURITY.md).
+Do **not** open public issues for security-related reports.
 
-```
+---
 
+## 🧭 Community Standards
+
+| File                                     | Purpose                           |
+| ---------------------------------------- | --------------------------------- |
+| [LICENSE](LICENSE)                       | MIT license for open use          |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Contributor expectations          |
+| [CONTRIBUTING.md](CONTRIBUTING.md)       | How to safely contribute          |
+| [SECURITY.md](SECURITY.md)               | Responsible disclosure policy     |
+| [.gitignore](.gitignore)                 | Excludes temp/log/sanitized files |
+| [.gitattributes](.gitattributes)         | Normalizes line endings and diffs |
+
+---
+
+## 🪪 License
+
+This project is licensed under the **MIT License** — see [LICENSE](LICENSE) for details.
+© 2025 **Tyler Gates**
+
+---
+
+<div align="center">
+
+💙 *Built for the PowerShell community — secure, clean, and ready to automate.*
+
+</div>
