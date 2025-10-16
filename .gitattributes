@@ -1,0 +1,64 @@
+# =========================================
+# Microsoft_Powershell_Projects - .gitattributes
+# Keep line-endings consistent, ensure clean diffs,
+# and mark binary files to avoid corruption.
+# =========================================
+
+# --- Line ending normalization ---
+# Normalize all text files in the repo to LF in Git.
+# On Windows, Git will check out as CRLF if user config requests it.
+*            text=auto eol=lf
+
+# Explicit text files (kept as text, normalized)
+*.ps1        text eol=lf
+*.psm1       text eol=lf
+*.psd1       text eol=lf
+*.ps1xml     text eol=lf
+*.pssc       text eol=lf
+*.psrc       text eol=lf
+*.md         text eol=lf
+*.json       text eol=lf
+*.csv        text eol=lf
+*.yml        text eol=lf
+*.yaml       text eol=lf
+*.xml        text eol=lf
+*.txt        text eol=lf
+
+# --- Diff behavior ---
+# Ensure PowerShell and typical text files use textual diffs
+*.ps1        diff
+*.psm1       diff
+*.psd1       diff
+*.md         diff
+*.json       diff
+*.csv        diff
+*.yml        diff
+*.yaml       diff
+
+# Mark archives / packages as binary (avoid line-ending changes and diffs)
+*.zip        binary
+*.7z         binary
+*.rar        binary
+*.gz         binary
+*.bz2        binary
+*.xz         binary
+*.intunewin  binary
+*.nupkg      binary
+*.dll        binary
+*.exe        binary
+*.pfx        binary
+*.cer        binary
+*.crt        binary
+*.png        binary
+*.jpg        binary
+*.jpeg       binary
+
+# --- GitHub Linguist (language stats & highlighting) ---
+# Make sure GitHub recognizes PowerShell as primary where appropriate
+*.ps1        linguist-language=PowerShell
+*.psm1       linguist-language=PowerShell
+*.psd1       linguist-language=PowerShell
+
+# If you keep generated/sanitized outputs in the repo (not recommended),
+# you can tell Linguist to ignore them in language stats:
+# Sanitized_PS1/* linguist-generated=true
