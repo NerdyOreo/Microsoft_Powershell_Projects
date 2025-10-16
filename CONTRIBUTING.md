@@ -140,7 +140,3 @@ By submitting a PR, you agree that your changes may be incorporated under that s
 
 Every contribution — from fixing typos to adding new modules — helps improve this project.
 Your attention to security, consistency, and quality keeps this repository valuable to the PowerShell community.
-
-```
-Would you like me to add a matching **`SECURITY.md`** next (a short file telling users how to report sensitive data or vulnerabilities responsibly)? It pairs nicely with `CONTRIBUTING.md`.
-```
