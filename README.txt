@@ -41,3 +41,91 @@ All scripts are provided as **sanitized templates** (company- and personal-speci
 ```powershell
 git clone https://github.com/NerdyOreo/Microsoft_Powershell_Projects.git
 cd Microsoft_Powershell_Projects
+````
+
+### Run a script (example)
+
+```powershell
+# Example: run a report script
+.\Get-IntuneUserDeviceReport.ps1 -WhatIf
+```
+
+> Most scripts support a `-WhatIf` or dry-run pattern. Check the top-of-file comments for details and parameters.
+
+---
+
+## Sanitizing your own scripts (included tool)
+
+This repo includes **`Sanitize-Scripts.ps1`**, which makes sanitized copies of `.ps1` files **without modifying the originals**.
+It also writes a `.mapping.json` and `.mapping.csv` so you can see what changed.
+
+**Examples**
+
+```powershell
+# Sanitize specific files → writes to .\Sanitized_PS1
+.\Sanitize-Scripts.ps1 -Files @(
+  "C:\Path\Script1.ps1",
+  "C:\Path\Script2.ps1"
+) -OutputDir "C:\Path\Sanitized_PS1"
+
+# Sanitize an entire folder (recursively)
+.\Sanitize-Scripts.ps1 -Path "C:\Scripts" -Recurse -OutputDir "C:\Scripts\Sanitized"
+
+# Dry run (no files written)
+.\Sanitize-Scripts.ps1 -Path "C:\Scripts" -Recurse -WhatIf -OutputDir "C:\Scripts\Sanitized"
+```
+
+**What it replaces (high level)**
+
+* Emails, UPNs, domains/hostnames (with whitelist), IPv4, MACs, GUIDs, URLs, UNC paths
+* Credential-like pairs and connection strings
+* JWT/Bearer tokens, SAS params, long Base64 blobs
+* Azure IDs (tenant/subscription/client) and Resource IDs
+* LDAP DNs
+* Company name terms you specify (see `-CompanyNamePatterns`)
+
+> Tip: Add public domains to the whitelist so they aren’t replaced (e.g. `microsoft.com`, `github.com`).
+
+---
+
+## Script Quality Tips
+
+* **Run PSScriptAnalyzer**
+
+  ```powershell
+  Install-Module PSScriptAnalyzer -Scope CurrentUser
+  Invoke-ScriptAnalyzer -Path . -Recurse -Fix -Settings Default
+  ```
+* **Use SecureString/SecretManagement** instead of hard-coded secrets.
+* **Parameterize** scripts; avoid environment-specific constants in code.
+* Prefer **idempotent** operations for deployments/remediations.
+* Add **`-WhatIf`** and **`-Confirm:$false`** patterns where meaningful.
+
+---
+
+## Contributing
+
+Contributions are welcome!
+Please open an **issue** or **PR** with:
+
+* a short description of the change
+* how you tested it
+* any prerequisites (modules/permissions)
+
+Coding style: align to PowerShell best practices (`PSScriptAnalyzer`), use CmdletBinding/advanced functions for new scripts, and include examples in comment-based help.
+
+---
+
+## License & Disclaimer
+
+MIT License — see `LICENSE`.
+This repository is **not affiliated with Microsoft**. All scripts are provided **as-is** without warranty. Review code and test before production use.
+
+---
+
+## Acknowledgments
+
+Thanks to the PowerShell community and Microsoft docs for patterns and references. If your script builds on someone’s public work, please credit them in the header comments.
+
+```
+
