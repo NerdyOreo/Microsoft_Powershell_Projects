@@ -27,20 +27,22 @@ All scripts are **sanitized templates** — any company-specific identifiers, cr
 
 ---
 
-## 🗂️ Repository Structure
+## 📁 Repository Structure
 
 | Folder | Description |
 |--------|--------------|
-| [`Get-IntuneUserDeviceReport`](Get-IntuneUserDeviceReport/) | Generate reports mapping users ↔ devices from Intune and Entra ID |
-| [`Intune_Intranet_Rollout`](Intune_Intranet_Rollout/) | Example rollout/deployment pattern for intranet or LOB content |
-| [`Uninstall-AdobePDF`](Uninstall-AdobePDF/) | Software remediation/uninstall template |
+| [`Get-IntuneUserDeviceReport`](Get-IntuneUserDeviceReport/) | Generate reports mapping users ⇄ devices from Intune and Entra ID |
+| [`Intune Intranet Rollout`](Intune Intranet Rollout/) | Example rollout/deployment pattern for intranet or LOB content |
 | [`KofaxDetection`](KofaxDetection/) | Intune detection script structure for verifying app installs |
+| [`RingCentral_Deployment`](RingCentral_Deployment/) | Intune deployment script for silently installing RingCentral via PowerShell |
 | [`Sanitize-Scripts.ps1`](Sanitize-Scripts.ps1) | Utility to remove company or personal data from `.ps1` files |
+| [`Uninstall-AdobePDF`](Uninstall-AdobePDF/) | Software remediation/uninstall template |
 | [`README.md`](README.md) | Main documentation |
 | [`LICENSE`](LICENSE) | MIT license |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | Contribution guidelines |
 | [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) | Contributor behavior standards |
 | [`SECURITY.md`](SECURITY.md) | Responsible disclosure and privacy policy |
+
 
 ---
 
