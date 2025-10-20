@@ -32,7 +32,7 @@ All scripts are **sanitized templates** — any company-specific identifiers, cr
 | Folder | Description |
 |--------|--------------|
 | [`Get-IntuneUserDeviceReport`](Get-IntuneUserDeviceReport/) | Generate reports mapping users ⇄ devices from Intune and Entra ID |
-| [`Intune Intranet Rollout`](Intune Intranet Rollout/) | Example rollout/deployment pattern for intranet or LOB content |
+| [`Intune Intranet Rollout`](Intune%20Intranet%20Rollout/) | Example rollout/deployment pattern for intranet or LOB content |
 | [`KofaxDetection`](KofaxDetection/) | Intune detection script structure for verifying app installs |
 | [`RingCentral_Deployment`](RingCentral_Deployment/) | Intune deployment script for silently installing RingCentral via PowerShell |
 | [`Sanitize-Scripts.ps1`](Sanitize-Scripts.ps1) | Utility to remove company or personal data from `.ps1` files |
