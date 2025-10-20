@@ -30,18 +30,20 @@ All scripts are **sanitized templates** — any company-specific identifiers, cr
 ## 📁 Repository Structure
 
 | Folder | Description |
-|--------|--------------|
-| [`Get-IntuneUserDeviceReport`](Get-IntuneUserDeviceReport/) | Generate reports mapping users ⇄ devices from Intune and Entra ID |
-| [`Intune Intranet Rollout`](Intune%20Intranet%20Rollout/) | Example rollout/deployment pattern for intranet or LOB content |
-| [`KofaxDetection`](KofaxDetection/) | Intune detection script structure for verifying app installs |
-| [`RingCentral_Deployment`](RingCentral_Deployment/) | Intune deployment script for silently installing RingCentral via PowerShell |
-| [`Sanitize-Scripts.ps1`](Sanitize-Scripts.ps1) | Utility to remove company or personal data from `.ps1` files |
-| [`Uninstall-AdobePDF`](Uninstall-AdobePDF/) | Software remediation/uninstall template |
-| [`README.md`](README.md) | Main documentation |
-| [`LICENSE`](LICENSE) | MIT license |
-| [`CONTRIBUTING.md`](CONTRIBUTING.md) | Contribution guidelines |
-| [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) | Contributor behavior standards |
-| [`SECURITY.md`](SECURITY.md) | Responsible disclosure and privacy policy |
+|--------|-------------|
+| [Get-IntuneUserDeviceReport](Get-IntuneUserDeviceReport) | Generate reports mapping users ⇄ devices from Intune and Entra ID |
+| [Intune Intranet Rollout](Intune%20Intranet%20Rollout) | Example rollout/deployment pattern for intranet or LOB content |
+| [KofaxDetection](KofaxDetection) | Intune detection script structure for verifying app installs |
+| [RingCentral_Deployment](RingCentral_Deployment) | Intune deployment script for silently installing RingCentral via PowerShell |
+| [Sanitize-Scripts.ps1](Sanitize-Scripts.ps1) | Utility to remove company or personal data from `.ps1` files |
+| [Uninstall_AdobePDF](Uninstall_AdobePDF) | Software remediation/uninstall template |
+| [SharePoint_Device_Inventory_Automation](SharePoint_Device_Inventory_Automation) | Automates creation of a SharePoint list for device inventory tracking using PnP.PowerShell |
+| [README.md](README.md) | Main documentation |
+| [LICENSE](LICENSE) | MIT license |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution guidelines |
+| [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Contributor behavior standards |
+| [SECURITY.md](SECURITY.md) | Responsible disclosure and privacy policy |
+
 
 
 ---
