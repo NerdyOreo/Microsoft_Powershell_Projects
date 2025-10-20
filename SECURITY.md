@@ -22,7 +22,7 @@ If you discover a vulnerability or believe sensitive information has been commit
    This prevents accidental disclosure.
 
 2. Instead, please contact the maintainer directly:  
-   **Email:** `nerdyoreo.dev@outlook.com` *(example — replace with your preferred address)*
+   **Email:** `explicitcontent231@gmail.com` 
 
 3. Include:
    - A description of what you found  
