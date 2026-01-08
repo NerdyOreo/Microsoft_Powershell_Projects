@@ -1,45 +1,80 @@
 <#
 .SYNOPSIS
-Intune_Joined_Device_Cleanup.ps1
-Removes built-in bloatware, disables Bing search, and applies enterprise cleanup to Windows 10/11 devices.
+Cleans up built-in Windows bloat and disables Bing search for all users on Intune-managed devices.
+
+.DESCRIPTION
+- Removes selected Appx provisioned packages for all users.
+- Removes selected Windows capabilities.
+- Removes optional Windows features.
+- Disables Bing search in Start Menu and Search Box via HKLM and all existing HKCU hives.
+- Writes logs to C:\Windows\Setup\Scripts\IntuneCleanup.log
+
+.NOTES
+Designed to run in system context via Intune.
 #>
 
+# --- Ensure script folder exists ---
 $scriptFolder = "C:\Windows\Setup\Scripts"
-New-Item -Path $scriptFolder -ItemType Directory -Force | Out-Null
-$logfile = "$scriptFolder\Cleanup.log"
+if (-not (Test-Path $scriptFolder)) { New-Item -Path $scriptFolder -ItemType Directory -Force | Out-Null }
 
-"Starting Intune_Joined_Device_Cleanup at $(Get-Date)" | Out-File -FilePath $logfile -Append
-"`r`n" | Out-File -FilePath $logfile -Append
+# --- Log file ---
+$logfile = "$scriptFolder\IntuneCleanup.log"
+"Starting Intune_Joined_Device_Cleanup.ps1 at $(Get-Date)" | Out-File -FilePath $logfile -Append
 
-# -----------------------------
-# 1 Disable Bing Search
-# -----------------------------
-"Disabling Bing search and search suggestions..." | Out-File -FilePath $logfile -Append
+# --------------------------
+# Disable Bing search via HKLM
+# --------------------------
+$regPathLM = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explorer"
+if (-not (Test-Path $regPathLM)) { New-Item -Path $regPathLM -Force | Out-Null }
 
 try {
-    # For all users via policy
-    $regPath1 = "HKLM\SOFTWARE\Policies\Microsoft\Windows\Explorer"
-    New-Item -Path $regPath1 -Force | Out-Null
-    Set-ItemProperty -Path $regPath1 -Name "DisableSearchBoxSuggestions" -Value 1 -Force
-
-    # For current user
-    $regPath2 = "HKCU\Software\Microsoft\Windows\CurrentVersion\Search"
-    Set-ItemProperty -Path $regPath2 -Name "BingSearchEnabled" -Value 0 -Force
-    Set-ItemProperty -Path $regPath2 -Name "CortanaConsent" -Value 0 -Force
-
-    "Bing search disabled successfully." | Out-File -FilePath $logfile -Append
+    Set-ItemProperty -Path $regPathLM -Name "DisableSearchBoxSuggestions" -Value 1 -Force
+    "Bing search disabled via HKLM successfully." | Out-File -FilePath $logfile -Append
 } catch {
-    "Failed to disable Bing search: $($_.Exception.Message)" | Out-File -FilePath $logfile -Append
+    $err = $_.ToString()
+    "Failed to disable Bing search via HKLM. Error: $err" | Out-File -FilePath $logfile -Append
 }
 
-"`r`n" | Out-File -FilePath $logfile -Append
+# --------------------------
+# Disable Bing search for all existing user HKCU hives
+# --------------------------
+$usersFolder = "C:\Users"
+foreach ($user in Get-ChildItem $usersFolder -Directory) {
+    if ($user.Name -in @("Public","Default","Default User","All Users")) { continue }
 
-# -----------------------------
-# 2 Remove Appx Packages
-# -----------------------------
-"Removing selected Appx packages for all users..." | Out-File -FilePath $logfile -Append
+    $ntUserDat = "$($user.FullName)\NTUSER.DAT"
+    if (Test-Path $ntUserDat) {
+        $hiveName = "TempHive_$($user.Name)"
+        $loaded = $false
 
-$packages = @(
+        try {
+            # Attempt to load hive
+            reg.exe load "HKU\$hiveName" $ntUserDat 2>$null
+            if (Test-Path "HKU:\$hiveName") { $loaded = $true }
+
+            if ($loaded) {
+                $regPathCU = "HKU:\$hiveName\Software\Microsoft\Windows\CurrentVersion\Search"
+                if (-not (Test-Path $regPathCU)) { New-Item -Path $regPathCU -Force | Out-Null }
+
+                Set-ItemProperty -Path $regPathCU -Name "BingSearchEnabled" -Value 0 -Force
+                Set-ItemProperty -Path $regPathCU -Name "CortanaConsent" -Value 0 -Force
+                "Bing search disabled for user $($user.Name) successfully." | Out-File -FilePath $logfile -Append
+            } else {
+                "Skipping $($user.Name) hive; could not load (in use or locked)." | Out-File -FilePath $logfile -Append
+            }
+        } catch {
+            $err = $_.ToString()
+            "Failed to modify user $($user.Name) hive. Error: $err" | Out-File -FilePath $logfile -Append
+        } finally {
+            if ($loaded) { reg.exe unload "HKU\$hiveName" | Out-Null }
+        }
+    }
+}
+
+# --------------------------
+# Remove Appx packages
+# --------------------------
+$appxSelectors = @(
     'Microsoft.Microsoft3DViewer',
     'Microsoft.BingSearch',
     'Microsoft.549981C3F5F10',
@@ -71,33 +106,83 @@ $packages = @(
 
 try {
     $installedPackages = Get-AppxProvisionedPackage -Online
-    foreach ($pkg in $packages) {
-        $found = $installedPackages | Where-Object { $_.DisplayName -eq $pkg }
+    foreach ($selector in $appxSelectors) {
+        $found = $installedPackages | Where-Object { $_.DisplayName -eq $selector }
         if ($found) {
             try {
                 $found | Remove-AppxProvisionedPackage -Online -AllUsers -ErrorAction Stop
-                "$pkg removed successfully." | Out-File -FilePath $logfile -Append
+                "$selector removed successfully." | Out-File -FilePath $logfile -Append
             } catch {
-                "$pkg removal failed: $($_.Exception.Message)" | Out-File -FilePath $logfile -Append
+                $err = $_.ToString()
+                "Failed to remove $selector. Error: $err" | Out-File -FilePath $logfile -Append
             }
         } else {
-            "$pkg not installed." | Out-File -FilePath $logfile -Append
+            "$selector not installed." | Out-File -FilePath $logfile -Append
         }
     }
 } catch {
-    "Failed to enumerate Appx packages: $($_.Exception.Message)" | Out-File -FilePath $logfile -Append
+    $err = $_.ToString()
+    "Error enumerating Appx packages. Error: $err" | Out-File -FilePath $logfile -Append
 }
 
-"`r`n" | Out-File -FilePath $logfile -Append
-
-# -----------------------------
-# 3️ Remove Windows Capabilities
-# -----------------------------
-"Removing selected Windows capabilities..." | Out-File -FilePath $logfile -Append
-
-$capabilities = @(
+# --------------------------
+# Remove Windows capabilities
+# --------------------------
+$capabilitySelectors = @(
     'Browser.InternetExplorer',
     'MathRecognizer',
     'App.Support.QuickAssist',
     'App.StepsRecorder'
 )
+
+try {
+    $installedCaps = Get-WindowsCapability -Online | Where-Object { $_.State -notin @('NotPresent','Removed') }
+    foreach ($selector in $capabilitySelectors) {
+        $found = $installedCaps | Where-Object { ($_.Name -split '~')[0] -eq $selector }
+        if ($found) {
+            try {
+                $found | Remove-WindowsCapability -Online -ErrorAction Stop
+                "$selector capability removed successfully." | Out-File -FilePath $logfile -Append
+            } catch {
+                $err = $_.ToString()
+                "Failed to remove $selector capability. Error: $err" | Out-File -FilePath $logfile -Append
+            }
+        } else {
+            "$selector capability not installed." | Out-File -FilePath $logfile -Append
+        }
+    }
+} catch {
+    $err = $_.ToString()
+    "Error enumerating capabilities. Error: $err" | Out-File -FilePath $logfile -Append
+}
+
+# --------------------------
+# Remove optional Windows features
+# --------------------------
+$featureSelectors = @(
+    'Recall'
+)
+
+try {
+    $installedFeatures = Get-WindowsOptionalFeature -Online | Where-Object { $_.State -notin @('Disabled','DisabledWithPayloadRemoved') }
+    foreach ($selector in $featureSelectors) {
+        $found = $installedFeatures | Where-Object { $_.FeatureName -eq $selector }
+        if ($found) {
+            try {
+                $found | Disable-WindowsOptionalFeature -Online -Remove -NoRestart -ErrorAction Stop
+                "$selector feature removed successfully." | Out-File -FilePath $logfile -Append
+            } catch {
+                $err = $_.ToString()
+                "Failed to remove $selector feature. Error: $err" | Out-File -FilePath $logfile -Append
+            }
+        } else {
+            "$selector feature not installed." | Out-File -FilePath $logfile -Append
+        }
+    }
+} catch {
+    $err = $_.ToString()
+    "Error enumerating features. Error: $err" | Out-File -FilePath $logfile -Append
+}
+
+# --- Finished ---
+"Finished Intune_Joined_Device_Cleanup.ps1 at $(Get-Date)" | Out-File -FilePath $logfile -Append
