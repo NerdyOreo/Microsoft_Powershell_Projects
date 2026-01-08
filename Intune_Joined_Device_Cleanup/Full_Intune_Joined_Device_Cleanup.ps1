@@ -6,7 +6,7 @@ Cleans up built-in Windows bloat and disables Bing search for all users on Intun
 - Removes selected Appx provisioned packages for all users.
 - Removes selected Windows capabilities.
 - Removes optional Windows features.
-- Disables Bing search in Start Menu and Search Box via HKLM and all existing HKCU hives.
+- Disables Bing search in Start Menu and Search Box via HKLM and all user HKCU hives.
 - Writes logs to C:\Windows\Setup\Scripts\IntuneCleanup.log
 
 .NOTES
@@ -36,7 +36,7 @@ try {
 }
 
 # --------------------------
-# Disable Bing search for all existing user HKCU hives
+# Disable Bing search for all existing user HKCU hives safely
 # --------------------------
 $usersFolder = "C:\Users"
 foreach ($user in Get-ChildItem $usersFolder -Directory) {
@@ -45,28 +45,22 @@ foreach ($user in Get-ChildItem $usersFolder -Directory) {
     $ntUserDat = "$($user.FullName)\NTUSER.DAT"
     if (Test-Path $ntUserDat) {
         $hiveName = "TempHive_$($user.Name)"
-        $loaded = $false
-
         try {
-            # Attempt to load hive
-            reg.exe load "HKU\$hiveName" $ntUserDat 2>$null
-            if (Test-Path "HKU:\$hiveName") { $loaded = $true }
+            # Load the user hive
+            reg.exe load "HKU\$hiveName" $ntUserDat | Out-Null
 
-            if ($loaded) {
-                $regPathCU = "HKU:\$hiveName\Software\Microsoft\Windows\CurrentVersion\Search"
-                if (-not (Test-Path $regPathCU)) { New-Item -Path $regPathCU -Force | Out-Null }
+            # Use reg.exe to create key and set values
+            $searchKey = "HKU\$hiveName\Software\Microsoft\Windows\CurrentVersion\Search"
+            reg.exe add "$searchKey" /v BingSearchEnabled /t REG_DWORD /d 0 /f | Out-Null
+            reg.exe add "$searchKey" /v CortanaConsent /t REG_DWORD /d 0 /f | Out-Null
 
-                Set-ItemProperty -Path $regPathCU -Name "BingSearchEnabled" -Value 0 -Force
-                Set-ItemProperty -Path $regPathCU -Name "CortanaConsent" -Value 0 -Force
-                "Bing search disabled for user $($user.Name) successfully." | Out-File -FilePath $logfile -Append
-            } else {
-                "Skipping $($user.Name) hive; could not load (in use or locked)." | Out-File -FilePath $logfile -Append
-            }
+            "Bing search disabled for user $($user.Name) successfully." | Out-File -FilePath $logfile -Append
         } catch {
             $err = $_.ToString()
-            "Failed to modify user $($user.Name) hive. Error: $err" | Out-File -FilePath $logfile -Append
+            "Failed to disable Bing search for user $($user.Name). Error: $err" | Out-File -FilePath $logfile -Append
         } finally {
-            if ($loaded) { reg.exe unload "HKU\$hiveName" | Out-Null }
+            # Unload the hive
+            reg.exe unload "HKU\$hiveName" | Out-Null
         }
     }
 }
