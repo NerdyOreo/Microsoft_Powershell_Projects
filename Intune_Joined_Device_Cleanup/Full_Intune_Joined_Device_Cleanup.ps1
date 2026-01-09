@@ -1,7 +1,6 @@
 # =====================================================================
 # Intune_Joined_Device_Cleanup.ps1
-# Safely disables Bing web search and removes unwanted components
-# SYSTEM compatible and user-hive safe
+# Bing web search disable for all users without HKU provider errors
 # =====================================================================
 
 $LogPath = "C:\ProgramData\Intune_Joined_Device_Cleanup.log"
@@ -14,110 +13,58 @@ function Write-Log {
 
 Write-Log "----- Script start -----"
 
-# =====================================================================
-# Section 1: Disable Bing Search for all users
-# =====================================================================
+# ---------------------------------------------------------------------
+# Disable Bing Search for default user profile (.DEFAULT affects new users)
+# ---------------------------------------------------------------------
 
-function Disable-BingSearchForHive {
-    param([string]$HiveRoot)
+try {
+    Write-Log "Configuring .DEFAULT user hive search settings"
 
-    try {
-        $regPath = "$HiveRoot\Software\Microsoft\Windows\CurrentVersion\Search"
+    reg add "HKU\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Search" /v BingSearchEnabled /t REG_DWORD /d 0 /f
+    reg add "HKU\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Search" /v CortanaConsent /t REG_DWORD /d 0 /f
+    reg add "HKU\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Search" /v DisableSearchBoxSuggestions /t REG_DWORD /d 1 /f
 
-        if (-not (Test-Path $regPath)) {
-            New-Item -Path $regPath -Force | Out-Null
-            Write-Log ("Created registry path " + $regPath)
+    Write-Log ".DEFAULT hive configured successfully"
+}
+catch {
+    Write-Log ("Failed configuring .DEFAULT hive Error: " + $_.Exception.Message)
+}
+
+# ---------------------------------------------------------------------
+# Apply setting to all currently loaded user hives under HKEY_USERS
+# ---------------------------------------------------------------------
+
+Write-Log "Enumerating mounted user hives"
+
+$UserHives = reg query HKU 2>$null
+
+foreach ($line in $UserHives) {
+
+    if ($line -match "^HKEY_USERS\\") {
+
+        $Hive = $line.Trim()
+
+        # Skip system accounts
+        if ($Hive -like "HKEY_USERS\S-1-5-18*" -or
+            $Hive -like "HKEY_USERS\S-1-5-19*" -or
+            $Hive -like "HKEY_USERS\S-1-5-20*") {
+
+            Write-Log ("Skipping system hive " + $Hive)
+            continue
         }
 
-        New-ItemProperty -Path $regPath -Name "BingSearchEnabled" -Value 0 -PropertyType DWord -Force | Out-Null
-        New-ItemProperty -Path $regPath -Name "CortanaConsent" -Value 0 -PropertyType DWord -Force | Out-Null
-        New-ItemProperty -Path $regPath -Name "DisableSearchBoxSuggestions" -Value 1 -PropertyType DWord -Force | Out-Null
+        Write-Log ("Configuring hive " + $Hive)
 
-        Write-Log ("Disabled Bing search for hive root " + $HiveRoot)
-    }
-    catch {
-        Write-Log ("Failed setting values for hive " + $HiveRoot + " Error: " + $_.Exception.Message)
-    }
-}
+        try {
+            reg add "$Hive\Software\Microsoft\Windows\CurrentVersion\Search" /v BingSearchEnabled /t REG_DWORD /d 0 /f
+            reg add "$Hive\Software\Microsoft\Windows\CurrentVersion\Search" /v CortanaConsent /t REG_DWORD /d 0 /f
+            reg add "$Hive\Software\Microsoft\Windows\CurrentVersion\Search" /v DisableSearchBoxSuggestions /t REG_DWORD /d 1 /f
 
-# Apply to Default User (future profiles)
-Disable-BingSearchForHive -HiveRoot "HKU\.DEFAULT"
-
-# Apply to each mounted user hive
-Get-ChildItem Registry::HKEY_USERS | ForEach-Object {
-    Disable-BingSearchForHive -HiveRoot $_.Name
-}
-
-# =====================================================================
-# Section 2: Remove Appx packages for all users
-# =====================================================================
-
-$AppxToRemove = @(
-    "Microsoft.BingNews",
-    "Microsoft.BingWeather",
-    "Microsoft.GetHelp",
-    "Microsoft.Getstarted",
-    "Microsoft.Microsoft3DViewer",
-    "Microsoft.MicrosoftOfficeHub",
-    "Microsoft.MicrosoftSolitaireCollection",
-    "Microsoft.MSPaint",
-    "Microsoft.People",
-    "Microsoft.SkypeApp",
-    "Microsoft.WindowsFeedbackHub",
-    "Microsoft.XboxApp",
-    "Microsoft.XboxSpeechToTextOverlay",
-    "Microsoft.XboxGamingOverlay",
-    "Microsoft.XboxIdentityProvider",
-    "Microsoft.Xbox.TCUI"
-)
-
-foreach ($selector in $AppxToRemove) {
-    try {
-        Get-AppxPackage -AllUsers -Name $selector | Remove-AppxPackage -AllUsers -ErrorAction Stop
-        Write-Log ("Removed Appx package " + $selector)
-    }
-    catch {
-        Write-Log ("Failed Appx removal " + $selector + " Error: " + $_.Exception.Message)
-    }
-}
-
-# =====================================================================
-# Section 3: Remove Capabilities
-# =====================================================================
-
-$CapabilitiesToRemove = @(
-    "App.Support.QuickAssist*",
-    "Microsoft.Windows.Notepad*",
-    "Microsoft.Windows.WordPad*"
-)
-
-foreach ($selector in $CapabilitiesToRemove) {
-    try {
-        Get-WindowsCapability -Online | Where-Object Name -Like $selector | Remove-WindowsCapability -Online -ErrorAction Stop
-        Write-Log ("Removed capability " + $selector)
-    }
-    catch {
-        Write-Log ("Failed capability removal " + $selector + " Error: " + $_.Exception.Message)
-    }
-}
-
-# =====================================================================
-# Section 4: Remove Optional Features
-# =====================================================================
-
-$FeaturesToRemove = @(
-    "WorkFolders-Client",
-    "Printing-XPSServices-Features",
-    "WindowsMediaPlayer"
-)
-
-foreach ($selector in $FeaturesToRemove) {
-    try {
-        Disable-WindowsOptionalFeature -FeatureName $selector -Online -NoRestart -ErrorAction Stop
-        Write-Log ("Disabled optional feature " + $selector)
-    }
-    catch {
-        Write-Log ("Failed optional feature removal " + $selector + " Error: " + $_.Exception.Message)
+            Write-Log ("Successfully configured hive " + $Hive)
+        }
+        catch {
+            Write-Log ("Failed configuring hive " + $Hive + " Error: " + $_.Exception.Message)
+        }
     }
 }
 
