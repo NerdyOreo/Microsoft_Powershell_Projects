@@ -1,71 +1,114 @@
-# =====================================================================
-# Intune_Joined_Device_Cleanup.ps1
-# Bing web search disable for all users without HKU provider errors
-# =====================================================================
+# ================================
+# Master Removal Script
+# ================================
 
-$LogPath = "C:\ProgramData\Intune_Joined_Device_Cleanup.log"
+# region Logging
+$LogRoot = "C:\ProgramData\RemovalLogs"
+New-Item -ItemType Directory -Path $LogRoot -Force | Out-Null
 
 function Write-Log {
     param([string]$Message)
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    Add-Content -Path $LogPath -Value "$timestamp`t$Message"
+    Add-Content -Path "$LogRoot\MasterRemoval.log" -Value "$timestamp $Message"
 }
 
-Write-Log "----- Script start -----"
+Write-Log "Master removal script starting"
+# endregion
 
-# ---------------------------------------------------------------------
-# Disable Bing Search for default user profile (.DEFAULT affects new users)
-# ---------------------------------------------------------------------
 
-try {
-    Write-Log "Configuring .DEFAULT user hive search settings"
+# -------------------
+# Remove APPX
+# -------------------
+$appxList = @(
+    "Microsoft.XboxApp",
+    "Microsoft.XboxGamingOverlay",
+    "Microsoft.Xbox.TCUI",
+    "Microsoft.XboxGameCallableUI",
+    "Microsoft.XboxIdentityProvider",
+    "Microsoft.Microsoft3DViewer",
+    "Microsoft.MicrosoftOfficeHub",
+    "Microsoft.MixedReality.Portal"
+)
 
-    reg add "HKU\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Search" /v BingSearchEnabled /t REG_DWORD /d 0 /f
-    reg add "HKU\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Search" /v CortanaConsent /t REG_DWORD /d 0 /f
-    reg add "HKU\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\Search" /v DisableSearchBoxSuggestions /t REG_DWORD /d 1 /f
-
-    Write-Log ".DEFAULT hive configured successfully"
-}
-catch {
-    Write-Log ("Failed configuring .DEFAULT hive Error: " + $_.Exception.Message)
-}
-
-# ---------------------------------------------------------------------
-# Apply setting to all currently loaded user hives under HKEY_USERS
-# ---------------------------------------------------------------------
-
-Write-Log "Enumerating mounted user hives"
-
-$UserHives = reg query HKU 2>$null
-
-foreach ($line in $UserHives) {
-
-    if ($line -match "^HKEY_USERS\\") {
-
-        $Hive = $line.Trim()
-
-        # Skip system accounts
-        if ($Hive -like "HKEY_USERS\S-1-5-18*" -or
-            $Hive -like "HKEY_USERS\S-1-5-19*" -or
-            $Hive -like "HKEY_USERS\S-1-5-20*") {
-
-            Write-Log ("Skipping system hive " + $Hive)
-            continue
-        }
-
-        Write-Log ("Configuring hive " + $Hive)
-
-        try {
-            reg add "$Hive\Software\Microsoft\Windows\CurrentVersion\Search" /v BingSearchEnabled /t REG_DWORD /d 0 /f
-            reg add "$Hive\Software\Microsoft\Windows\CurrentVersion\Search" /v CortanaConsent /t REG_DWORD /d 0 /f
-            reg add "$Hive\Software\Microsoft\Windows\CurrentVersion\Search" /v DisableSearchBoxSuggestions /t REG_DWORD /d 1 /f
-
-            Write-Log ("Successfully configured hive " + $Hive)
-        }
-        catch {
-            Write-Log ("Failed configuring hive " + $Hive + " Error: " + $_.Exception.Message)
-        }
+foreach ($selector in $appxList) {
+    try {
+        Write-Log "Removing Appx ${selector}"
+        Get-AppxPackage -AllUsers | Where-Object {$_.Name -like "*$selector*"} | Remove-AppxPackage -AllUsers -ErrorAction Stop
+        Write-Log "Success Appx ${selector}"
+    }
+    catch {
+        Write-Log "Failed Appx removal ${selector}: $($_.Exception.Message)"
     }
 }
 
-Write-Log "----- Script complete -----"
+
+# -------------------
+# Remove Windows Capabilities
+# -------------------
+$capabilities = @(
+    "App.Support.QuickAssist",
+    "MathRecognize",
+    "Microsoft.Windows.WordPad",
+    "Print.Fax.Scan",
+    "XPS.Viewer"
+)
+
+foreach ($selector in $capabilities) {
+    try {
+        Write-Log "Removing capability ${selector}"
+        Remove-WindowsCapability -Online -Name $selector -ErrorAction Stop
+        Write-Log "Success capability ${selector}"
+    }
+    catch {
+        Write-Log "Failed capability removal ${selector}: $($_.Exception.Message)"
+    }
+}
+
+
+# -------------------
+# Remove Optional Features
+# -------------------
+$features = @(
+    "WorkFolders-Client",
+    "Printing-PrintToPDFServices-Features",
+    "Xps-Foundation-Xps-Viewer",
+    "MicrosoftWindowsPowerShellV2"
+)
+
+foreach ($selector in $features) {
+    try {
+        Write-Log "Disabling optional feature ${selector}"
+        Disable-WindowsOptionalFeature -Online -FeatureName $selector -NoRestart -ErrorAction Stop
+        Write-Log "Success feature ${selector}"
+    }
+    catch {
+        Write-Log "Failed optional feature removal ${selector}: $($_.Exception.Message)"
+    }
+}
+
+
+# -------------------
+# Disable Bing Search / Web Results in Start Menu
+# -------------------
+
+Write-Log "Starting Bing Search removal"
+
+try {
+    $SearchKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Windows Search"
+    if (!(Test-Path $SearchKey)) {
+        New-Item -Path $SearchKey -Force | Out-Null
+    }
+
+    New-ItemProperty -Path $SearchKey -Name "DisableSearchBoxSuggestions" -Value 1 -PropertyType DWord -Force | Out-Null
+    New-ItemProperty -Path $SearchKey -Name "ConnectedSearchUseWeb" -Value 1 -PropertyType DWord -Force | Out-Null
+    New-ItemProperty -Path $SearchKey -Name "ConnectedSearchUseWebOverMeteredConnections" -Value 0 -PropertyType DWord -Force | Out-Null
+    New-ItemProperty -Path $SearchKey -Name "ConnectedSearchPrivacy" -Value 3 -PropertyType DWord -Force | Out-Null
+
+    Write-Log "Bing Web Search successfully disabled"
+}
+catch {
+    Write-Log "Failed to disable Bing search: $($_.Exception.Message)"
+}
+
+
+Write-Log "Master removal script complete"
